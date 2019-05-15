@@ -1,0 +1,20 @@
+#!/usr/bin/env python
+# Author: zhoubin
+# Date: 2019-05-15
+# Description: 该脚本用于将服务器公钥文件发送给其他服务器以实现免密登录
+
+from pexpect import *
+
+
+hosts = ['172.16.68.102', '172.16.68.103', '172.16.68.104']
+
+for i in hosts:
+    try:
+        print('正在为主机\033[1;35m {} \033[0m创建免密登录'.format(i))
+        child = spawn('ssh-copy-id -f -i /root/.ssh/id_rsa.pub root@{}'.format(i))
+        child.expect('password:')
+        child.sendline('123456')
+        child.interact()
+        child.close()
+    except Exception as e:
+        print('\033[1;32m{} \033[0m已添加免密登录'.format(i))

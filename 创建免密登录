@@ -3,20 +3,77 @@
 # Date: 2019-05-15
 # Description: 该脚本用于将服务器公钥文件发送给其他服务器以实现免密登录
 
-from pexpect import *
+import os
+import configparser
+import pexpect
+import shutil
+
+servers = configparser.ConfigParser(allow_no_value=True)
+servers.read('lnmp_for_yum/hosts')
+
+ips = servers.options('all')
 
 
-hosts = ['172.16.68.102', '172.16.68.103', '172.16.68.104']
-
-for i in hosts:
+def generate_secret(secret_file):
+    """ 生成秘钥文件 """
+    if os.path.exists(secret_file):
+        shutil.rmtree(os.path.dirname(secret_file))
     try:
-        print('正在为主机\033[1;35m {} \033[0m创建免密登录'.format(i))
-        child = spawn('ssh-copy-id -f -i /root/.ssh/id_rsa.pub root@{}'.format(i))
-        child.expect('Are you sure you want to continue connecting (yes/no)?')
-        child.sendline('yes')
-        child.expect('password:')
-        child.sendline('123456')
+        print('正在生成秘钥文件')
+        child = pexpect.spawn('ssh-keygen -t rsa')
+        child.expect('Enter')
+        child.send('\n')
+        child.expect('Enter')
+        child.send('\n')
+        child.expect('Enter')
+        child.send('\n')
+        child.expect(pexpect.EOF, timeout=30)
+        if os.path.exists(secret_file):
+            print('秘钥文件生成OK.')
+        else:
+            print('秘钥文件生成失败！')
+    except pexpect.EOF:
+        pass
+
+
+def set_logging_with_secret(secret_file, host):
+    """ 配置免密码登录远程服务器 """
+    try:
+        print('正在配置免密码登录主机 {}'.format(host))
+        child = pexpect.spawn('ssh-copy-id -f -i {0} wanwu@{1}'.format(secret_file, host))
+        i = child.expect(['yes/no', 'password'])
+        if i == 0:
+            child.sendline('yes')
+            child.expect('password')
+            child.sendline('123456')
+        else:
+            child.sendline('123456')
         child.interact()
+    except pexpect.EOF:
+        pass
+
+
+def set_sudo_no_pass(host):
+    """ 设置sudo 提权时不需要输入密码 """
+    try:
+        print('正在设置 sudo 提权不需要输入密码...')
+        child = pexpect.spawn('ssh wanwu@{} '.format(host))
+        child.expect('$')
+        child.sendline("sudo sed -i '/^## Same thing/a\%wheel        ALL=(ALL)       NOPASSWD: ALL' /etc/sudoers")
+        child.expect('wanwu:')
+        child.sendline('123456')
+        child.expect('$')
+        child.sendline('exit')
         child.close()
-    except Exception as e:
-        print('\033[1;32m{} \033[0m已添加免密登录'.format(i))
+        print('主机 {} 提权设置完成!'.format(host))
+    except pexpect.EOF:
+        pass
+
+
+if __name__ == '__main__':
+    secret_file = '/root/.ssh/id_rsa.pub'
+    generate_secret(secret_file)
+    for host in ips:
+        set_logging_with_secret(secret_file, host)
+    for host in ips:
+        set_sudo_no_pass(host)

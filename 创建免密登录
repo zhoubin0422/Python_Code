@@ -12,6 +12,8 @@ for i in hosts:
     try:
         print('正在为主机\033[1;35m {} \033[0m创建免密登录'.format(i))
         child = spawn('ssh-copy-id -f -i /root/.ssh/id_rsa.pub root@{}'.format(i))
+        child.expect('Are you sure you want to continue connecting (yes/no)?')
+        child.sendline('yes')
         child.expect('password:')
         child.sendline('123456')
         child.interact()

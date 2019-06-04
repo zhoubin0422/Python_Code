@@ -10,9 +10,9 @@ import sys
 
 
 # 企业号及应用相关信息
-corp_id = 'wwa755402ee703c9f7'
-corp_secret = 'VWpsnfNokKVMF359U8d0ZPXBci1YNNFjYlDaGtpyxpk'
-agent_id = '1000002'
+corp_id = 'xxxxxxx'
+corp_secret = 'xxxxxxxxx'
+agent_id = 'xxxxxx'
 
 # 存放 access_token
 file_path = '/tmp/access_token.log'
